@@ -16,15 +16,19 @@ public class MyNetworkManager : MyNetworkProtocol  {
     
     public func fetchRequest<T : Codable>(with builder: RequestBuilder, type: T.Type) throws -> AnyPublisher<T, APIError> where T : Codable {
         
+        
         do{
             let request = try builder.build()
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
             return URLSession.shared.dataTaskPublisher(for: request)
                 .subscribe(on : DispatchQueue.global(qos: .background))
                 .tryMap{ data, response -> Data in
                     try processResponse(statusCode: (response as? HTTPURLResponse)?.statusCode ?? 0)
                     return data
                 }
-                .decode(type: T.self, decoder: JSONDecoder())
+           
+                .decode(type: T.self, decoder: decoder)
                 .mapError{ error -> APIError in
                     if error is DecodingError {
                         return APIError.decodingError
